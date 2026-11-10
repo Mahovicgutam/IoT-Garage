@@ -99,8 +99,8 @@ let isConnected = false;
 
 const mqttOptions = {
     clientId: 'web_dash_' + Math.random().toString(16).substr(2, 8),
-    username: 'web_dash',                 
-    password: 'EKTg9jxwGaZ2tq4', 
+    username: 'username',                 
+    password: 'password', 
     clean: true,
     connectTimeout: 10000,
     reconnectPeriod: 0,
