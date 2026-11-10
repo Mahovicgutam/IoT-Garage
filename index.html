@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart TTG Dashboard</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+
+    <div class="container">
+        <header class="header">
+            <div class="header-left">
+                <h1 class="logo">Smart<span>TTG</span></h1>
+                <p class="subtitle">High Carbon Monoxide Level Warning System</p>
+            </div>
+            
+            <div class="header-right">
+                <div class="clock-container">
+                    <div id="time-display" class="time">00:00:00</div>
+                    <div id="date-display" class="date">Loading date...</div>
+                </div>
+                
+                <div class="connection-badge" id="conn-status">
+                    <div class="pulse-dot"></div>
+                    <span id="status-text">Connecting...</span>
+                </div>
+            </div>
+        </header>
+
+        <section>
+            <div class="grid-sensors">
+                <div class="card sensor-card glass-card border-blue">
+                    <div class="card-top">
+                        <div class="icon-box bg-blue-soft"><i class="fa-solid fa-wind icon-blue"></i></div>
+                        <div class="status-tag">Carbon Monoxide Gas</div>
+                    </div>
+                    <div class="card-middle">
+                        <h2 class="sensor-value" id="val-mq7">-- <span class="unit">ppm</span></h2>
+                    </div>
+                    <div class="card-bottom stats-row">
+                        <div class="stat-item"><span>Max:</span> <strong id="max-mq7">--</strong></div>
+                        <div class="stat-item"><span>Min:</span> <strong id="min-mq7">--</strong></div>
+                    </div>
+                </div>
+
+                <div class="card sensor-card glass-card border-gold">
+                    <div class="card-top">
+                        <div class="icon-box bg-gold-soft"><i class="fa-solid fa-temperature-half icon-gold"></i></div>
+                        <div class="status-tag">Room Temperature</div>
+                    </div>
+                    <div class="card-middle">
+                        <h2 class="sensor-value" id="val-temp">-- <span class="unit">°C</span></h2>
+                    </div>
+                    <div class="card-bottom">
+                        <p class="desc">DHT22 sensor reading</p>
+                    </div>
+                </div>
+
+                <div class="card sensor-card glass-card border-cyan">
+                    <div class="card-top">
+                        <div class="icon-box bg-cyan-soft"><i class="fa-solid fa-droplet icon-cyan"></i></div>
+                        <div class="status-tag">Humidity</div>
+                    </div>
+                    <div class="card-middle">
+                        <h2 class="sensor-value" id="val-hum">-- <span class="unit">%</span></h2>
+                    </div>
+                    <div class="card-bottom">
+                        <p class="desc">DHT22 sensor reading</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section-controls">
+            <h2 class="section-title"><i class="fa-solid fa-sliders"></i> Controls & Settings</h2>
+            
+            <div class="grid-controls">
+                <div class="card glass-card control-card">
+                    <div class="card-top">
+                        <h3><i class="fa-solid fa-crosshairs icon-gold"></i> Gas Setpoint</h3>
+                    </div>
+                    <p class="desc">Alarm trigger threshold: <strong id="current-setpoint">1800 ppm</strong></p>
+                    <div class="input-group">
+                        <input type="number" id="input-setpoint" placeholder="Trigger threshold (ppm)">
+                        <button class="btn btn-primary" onclick="kirimSetpoint()">Update</button>
+                    </div>
+                </div>
+
+                <div class="card glass-card control-card">
+                    <div class="card-top">
+                        <h3><i class="fa-solid fa-fan icon-blue" id="icon-fan"></i> Exhaust Fan</h3>
+                    </div>
+                    <p class="desc">Status: <strong id="label-fan">OFF</strong></p>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-fan" onchange="toggleActuator('fan', this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="card glass-card control-card">
+                    <div class="card-top">
+                        <h3><i class="fa-solid fa-bell icon-gold" id="icon-buzzer"></i> Buzzer Alarm</h3>
+                    </div>
+                    <p class="desc">Status: <strong id="label-buzzer">OFF</strong></p>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-buzzer" onchange="toggleActuator('buzzer', this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <section class="chart-section">
+            <div class="card glass-card chart-card">
+                <div class="card-top">
+                    <h3><i class="fa-solid fa-chart-line icon-blue"></i> Gas Level Fluctuation</h3>
+                    <button class="btn-icon" onclick="enableNotifications()" title="Enable Notifications"><i class="fa-solid fa-bell"></i></button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="mq7Chart"></canvas>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div id="toast" class="toast">
+        <i class="fa-solid fa-circle-check"></i>
+        <span id="toast-msg">Notification</span>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
